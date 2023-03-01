@@ -1,6 +1,0 @@
-[submodule "include/testlib"]
-	path = include/testlib
-	url = git@github.com:MikeMirzayanov/testlib.git
-[submodule "include/ac-library"]
-	path = include/ac-library
-	url = git@github.com:atcoder/ac-library.git
