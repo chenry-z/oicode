@@ -111,25 +111,6 @@ int main() {
 		sum ^= w;
 	}
 	std::vector<int> dfn(n), fa(n), faw(n);
-	std::vector<std::vector<int>> cycle;
-	auto DFS = [&](auto &&DFS, int u) -> void {
-		static int dfx = 0;
-		dfn[u] = ++dfx;
-		for (auto [v, w] : e[u]) {
-			if (dfn[v] == 0) {
-				fa[v] = u, faw[v] = w;
-				DFS(DFS, v);
-			} else if (dfn[v] > dfn[u]) {
-				cycle.push_back({});
-				int cur = w;
-				for (int now = v; now != u; now = fa[now]) cur ^= faw[now];
-				sum ^= cur;
-				cycle.back().emplace_back(cur ^ w);
-				for (int now = v; now != u; now = fa[now]) cycle.back().emplace_back(cur ^ faw[now]);
-			}
-		}
-	};
-	DFS(DFS, 0);
 	constexpr int inv2 = (md + 1) / 2;
 	auto FWT = [&](std::vector<Mint> &f, bool rev) {
 		for (int i = 0; i < N; ++i)
@@ -140,17 +121,33 @@ int main() {
 					if (rev) f[j | k] *= inv2, f[(1 << i) | j | k] *= inv2;
 				}
 	};
-	std::vector<Mint> A(1 << N);
-	A[sum] = 1;
-	FWT(A, false);
-	for (auto V : cycle) {
-		std::vector<Mint> B(1 << N);
-		for (auto x : V) B[x] += 1;
-		FWT(B, false);
-		for (int i = 0; i < (1 << N); ++i) A[i] *= B[i];
+	std::vector<Mint> A(1 << N), C(1 << N);
+	A[0] = C[0] = 1;
+	FWT(A, false), FWT(C, false);
+	std::mt19937 rng(std::chrono::steady_clock().now().time_since_epoch().count());
+	auto DFS = [&](auto &&DFS, int u) -> void {
+		static int dfx = 0;
+		dfn[u] = ++dfx;
+		for (auto [v, w] : e[u]) {
+			if (dfn[v] == 0) {
+				fa[v] = u, faw[v] = w;
+				DFS(DFS, v);
+			} else if (dfn[v] > dfn[u]) {
+				int cur = w;
+				for (int now = v; now != u; now = fa[now]) cur ^= faw[now];
+				sum ^= cur;
+				std::vector<Mint> B(1 << N), D(1 << N);
+				B[cur ^ w] += 1;
+				D[cur ^ w] = (int)rng();
+				for (int now = v; now != u; now = fa[now]) B[cur ^ faw[now]] += 1, D[cur ^ faw[now]] = (int)rng();
+				FWT(B, false), FWT(D, false);
+				for (int i = 0; i < (1 << N); ++i) A[i] *= B[i], C[i] *= D[i];
+			}
+		}
 	};
-	FWT(A, true);
+	DFS(DFS, 0);
+	FWT(A, true), FWT(C, true);
 	for (int i = 0; i < (1 << N); ++i)
-		if (A[i] != 0) return std::cout << i << ' ' << A[i] << '\n', 0;
+		if (C[i ^ sum] != 0) return std::cout << i << ' ' << A[i ^ sum] << '\n', 0;
 	return 0;	
 }
